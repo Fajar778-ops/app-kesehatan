@@ -14,7 +14,8 @@
     "react-dom": "latest",
     "next": "14.2.3",
     "chart.js": "^4.4.0",
-    "react-chartjs-2": "^5.2.0"
+    "react-chartjs-2": "^5.2.0",
+    "chartjs-plugin-zoom": "^2.0.1"
   },
  "devDependencies": {
     "eslint": "^9",
