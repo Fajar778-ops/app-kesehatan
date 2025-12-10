@@ -12,7 +12,7 @@
     "mqtt": "^5.0.0", 
     "react": "latest",
     "react-dom": "latest",
-    "next": "latest"
+    "next": "14.2.3"
   },
  "devDependencies": {
     "eslint": "^9",
