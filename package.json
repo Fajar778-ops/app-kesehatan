@@ -10,9 +10,9 @@
   },
   "dependencies": {
     "mqtt": "^5.0.0", 
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.4.2"
+    "react": "latest",
+    "react-dom": "latest",
+    "next": "latest"
   },
  "devDependencies": {
     "eslint": "^9",
