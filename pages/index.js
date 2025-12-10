@@ -12,7 +12,6 @@ import {
   Filler
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-// --- IMPORT PLUGIN ZOOM ---
 import zoomPlugin from 'chartjs-plugin-zoom';
 
 // --- REGISTRASI PLUGIN ---
@@ -25,7 +24,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   Filler,
-  zoomPlugin // <-- Daftarkan plugin zoom
+  zoomPlugin
 );
 
 // --- KONFIGURASI MQTT ---
@@ -35,15 +34,18 @@ const TOPIC_VITALS = "esp32/vitals";
 const TOPIC_EKG    = "esp32/ekg";
 
 export default function Home() {
+    // --- STATE ---
     const [nama, setNama] = useState('');
     const [status, setStatus] = useState('');
     const [isMqttConnected, setIsMqttConnected] = useState(false);
+    
+    // STATE PENGAMAN RENDER (FIX ERROR BUILD)
+    const [isClient, setIsClient] = useState(false);
 
     const [dataSensor, setDataSensor] = useState({
         bpm: "--", spo2: "--", suhu: "--", pasien: "Menunggu..."
     });
 
-    // State Grafik EKG
     const [chartData, setChartData] = useState({
         labels: [],
         datasets: [
@@ -60,7 +62,6 @@ export default function Home() {
         ],
     });
 
-    // --- OPSI GRAFIK BARU (DENGAN ZOOM & AUTO-SCALE) ---
     const chartOptions = {
         responsive: true,
         animation: false,
@@ -68,41 +69,33 @@ export default function Home() {
             x: { display: false }, 
             y: { 
                 display: true,
-                // --- MODE AUTO-SCALE (Agar selalu di tengah) ---
-                // Kita hapus min/max paksa. Biarkan chart menentukan sendiri.
-                // min: 1500, 
-                // max: 3000, 
                 grid: { color: '#333' },
                 ticks: { color: '#888' }
             }
         },
         plugins: {
             legend: { display: false },
-            // --- KONFIGURASI ZOOM ---
             zoom: {
-                pan: {
-                    enabled: true,
-                    mode: 'xy', // Bisa geser kiri-kanan atas-bawah
-                },
+                pan: { enabled: true, mode: 'xy' },
                 zoom: {
-                    wheel: {
-                        enabled: true, // Zoom pakai scroll mouse
-                    },
-                    pinch: {
-                        enabled: true // Zoom pakai cubit di HP
-                    },
-                    mode: 'xy', // Bisa zoom sumbu X dan Y
+                    wheel: { enabled: true },
+                    pinch: { enabled: true },
+                    mode: 'xy',
                 }
             }
         },
         maintainAspectRatio: false,
     };
 
-    // BUFFER DIPERBESAR (Agar bisa di-zoom out melihat sejarah)
     const ekgBuffer = useRef([]); 
-    const MAX_DATA_POINTS = 200; // Simpan 200 titik terakhir
+    const MAX_DATA_POINTS = 200;
 
-    // --- FUNGSI MQTT ---
+    // --- EFFECT: SET IS CLIENT ---
+    useEffect(() => {
+        setIsClient(true); // Aktifkan render grafik hanya setelah browser siap
+    }, []);
+
+    // --- EFFECT: MQTT ---
     useEffect(() => {
         const clientId = "Web-" + Math.random().toString(16).substr(2, 8);
         const options = {
@@ -130,8 +123,6 @@ export default function Home() {
                 } 
                 else if (topic === TOPIC_EKG) {
                     const newValue = payload.val;
-                    
-                    // Masukkan ke buffer yang lebih besar
                     ekgBuffer.current.push(newValue);
                     if (ekgBuffer.current.length > MAX_DATA_POINTS) {
                         ekgBuffer.current.shift();
@@ -148,18 +139,27 @@ export default function Home() {
         return () => { if (client) client.end(); };
     }, []);
 
-    // --- FUNGSI INPUT NAMA & TOMBOL RESET ZOOM ---
-    const handleSubmit = async (e) => { e.preventDefault(); /* ... kode lama ... */ };
-    
-    // Fungsi untuk mereset zoom (optional, butuh setup ref chart)
-    // const resetZoom = () => { chartRef.current.resetZoom(); };
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setStatus('Sedang mengirim...');
+        try {
+            const res = await fetch('/api/pasien/aktif', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_pasien: nama })
+            });
+            const data = await res.json();
+            setStatus(`Sukses! Pasien aktif: ${data.pasien_aktif}`);
+        } catch (err) {
+            setStatus('Gagal mengirim data.');
+        }
+    };
 
     return (
         <div style={{ padding: '20px', fontFamily: 'Arial', maxWidth: '800px', margin: '0 auto', backgroundColor: '#111', color: 'white', minHeight: '100vh' }}>
             <h2 style={{ textAlign: 'center', color: '#00FF00' }}>MONITORING EKG IoT</h2>
-            <p style={{textAlign: 'center', fontSize: '0.8em', color: '#aaa'}}>(Gunakan scroll mouse atau cubit untuk Zoom, klik & tahan untuk Geser)</p>
+            <p style={{textAlign: 'center', fontSize: '0.8em', color: '#aaa'}}>(Gunakan scroll mouse atau cubit untuk Zoom)</p>
             
-            {/* STATUS & INPUT (Sama seperti sebelumnya) */}
             <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #333', borderRadius: '10px' }}>
                 <p>Status MQTT: <span style={{ color: isMqttConnected ? '#00FF00' : 'red' }}>{isMqttConnected ? 'ONLINE' : 'OFFLINE'}</span></p>
                 <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
@@ -169,19 +169,17 @@ export default function Home() {
                 <small>{status}</small>
             </div>
 
-            {/* MONITOR AREA */}
             <div style={{ border: '2px solid #555', borderRadius: '10px', padding: '10px', backgroundColor: 'black' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '10px', marginBottom: '10px' }}>
                     <h3>Pasien: <span style={{ color: 'cyan' }}>{dataSensor.pasien}</span></h3>
                     <h3>HR: <span style={{ color: 'red', fontSize: '1.5em' }}>{dataSensor.bpm}</span></h3>
                 </div>
 
-                {/* GRAFIK EKG (Tinggi diperbesar sedikit) */}
+                {/* GRAFIK EKG DENGAN PENGAMAN */}
                 <div style={{ height: '300px', width: '100%', marginBottom: '20px', cursor: 'move' }}>
-                    <Line data={chartData} options={chartOptions} />
+                    {isClient && <Line data={chartData} options={chartOptions} />}
                 </div>
 
-                {/* DATA ANGKA LAIN */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', textAlign: 'center' }}>
                     <div style={{ border: '1px solid blue', padding: '10px', borderRadius: '5px' }}>
                         <div style={{ color: 'blue', fontSize: '2em' }}>{dataSensor.spo2}%</div>
