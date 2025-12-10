@@ -3,7 +3,7 @@ import mqtt from 'mqtt';
 // Jika Anda ingin menampilkan grafik, Anda mungkin perlu mengimpor Chart.js atau sejenisnya di sini
 
 // Definisikan token di luar komponen untuk keamanan yang lebih baik (atau pakai .env)
-const MQTT_TOKEN = "FlespiToken KXAmtZULWIlBDmG4hF37hArI0BOTHUcaHWfh9BPQrLorrOegwHegR8YD5WYmeVYU"; 
+const MQTT_TOKEN = "FlespiToken SVuaJdZboOeoyXKKIhFjKYRKfUOzRaHXavHMSTfn7oSl6og9BUPvdGdfk5lVr1Vl"; 
 const MQTT_SERVER = "wss://mqtt.flespi.io";
 const MQTT_TOPIC = "esp32/vitals";
 
