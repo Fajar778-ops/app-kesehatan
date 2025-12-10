@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "mqtt": "^5.0.0", 
+    "mqtt": "4.3.7", 
     "react": "latest",
     "react-dom": "latest",
     "next": "14.2.3"
